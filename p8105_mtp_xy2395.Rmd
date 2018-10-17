@@ -7,5 +7,31 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+First, load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; and code data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc). Discuss any additional exploratory analyses you conduct, but only include results you think are interesting (e.g. visually inspect distributions for outliers, but include only if these are informative).
+```{r cache=TRUE}
+data = read_csv("./data/p8105_mtp_data.csv")
+```
+
+
+
+
+
+
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable. Using these data, explore the hypothesis that this participant became more active over time. You may want to want to make comparisons visually and / or quantitatively, or using formal statistical analyses. Additionally, examine the possibility that day of the week affects activity (in isolation and in addition to the effect of time).
+
+
+
+
+
+
+One advantage of accelerometer data is the ability to inspect activity over the course of the day, rather than aggregating over 24 hours. Explore the distribution of activity counts in the full dataset, taking into account other variables of interest. Make a visualization that shows the 24-hour activity “profiles” for each day. Also visualize effects of time and day of the week on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects. Comment on relationships you think are interesting. (No formal statistical analyses are needed.)
+```{r}
+install_github("unDocUMeantIt/sylly", ref="develop")
+install_github("unDocUMeantIt/koRpus")
+
+devtools::install_github("benmarwick/wordcountaddin", type = "source", dependencies = TRUE,force=TRUE)
+wordcountaddin::text_stats("p8105_mtp_xy2395.Rmd")
 ```
 

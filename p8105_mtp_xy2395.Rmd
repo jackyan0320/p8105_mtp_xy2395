@@ -28,9 +28,15 @@ motion_data =
     minute_in_hour = as.integer(minute - 60 * hour)
   ) %>% 
   select(day_num, week, day, minute, hour, minute_in_hour, value) %>% 
-  arrange(week, day, minute)
+  arrange(week, day, minute) 
   
 str(motion_data)
+```
+
+```{r}
+# interesting outliers and abnormal values
+
+
 ```
 
 Traditional analyses of accelerometer data focus on the `total activity over the day`. Using your tidied dataset, aggregate across minutes to create a `total activity variable`. Using these data, explore the hypothesis that this participant became `more active` over time. You may want to make comparisons visually and / or quantitatively, or using formal statistical analyses. 
@@ -43,12 +49,18 @@ sum_of_day =
     sum = sum(value)
   )
 
-sum_of_day
-
 sum_of_day %>% 
-  ggplot(aes(x = day_num, y = sum, color = week)) +
-    geom_point()
+  filter(sum<100)
+motion_data %>% 
+  filter(day_num==14)
 
+# trend thru days
+sum_of_day %>% 
+  ggplot(aes(x = day_num, y = sum)) +
+    geom_point() +
+    geom_smooth(se = FALSE)
+
+lm(day_num ~ sum, sum_of_day)
 sum_of_week = 
   motion_data %>% 
   group_by(week) %>% 
@@ -58,10 +70,12 @@ sum_of_week =
 
 sum_of_week
 
+# trend thru weeks
 sum_of_week %>% 
   ggplot(aes(x = week, y = sum)) +
     geom_point() +
-    geom_line()
+    geom_line() +
+    geom_smooth(se = FALSE)
 
 ```
 
@@ -79,7 +93,7 @@ motion_data %>%
   group_by(week,day) %>%
   summarize(sum = sum(value)) %>% 
   ggplot(aes(x = day, y = sum, color = week)) +
-    geom_point()
+    geom_boxplot()
 
 motion_data %>% 
   group_by(week,day) %>%
@@ -90,7 +104,21 @@ motion_data %>%
   
 ```
 
-One advantage of accelerometer data is the ability to inspect activity over the course of the day, rather than aggregating over 24 hours. Explore the distribution of activity counts in the full dataset, taking into account other variables of interest. Make a visualization that shows the 24-hour activity “profiles” for each day. Also visualize effects of time and day of the week on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects. Comment on relationships you think are interesting. (No formal statistical analyses are needed.)
+One advantage of accelerometer data is the ability to inspect activity `over the course of the day`, rather than aggregating over 24 hours. Explore the distribution of activity counts in the full dataset, taking into account other variables of interest.
+Make a visualization that shows the 24-hour activity “profiles” for each day. 
+Also visualize effects of time and day of the week on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects. Comment on relationships you think are interesting. (No formal statistical analyses are needed.)
+
+
+```{r}
+motion_data %>% 
+  group_by(day_num, hour,day) %>% 
+  summarise(sum = sum(value)) %>% 
+    ggplot(aes( x = sum, group = day,fill = day)) +
+    geom_density(alpha = .3)
+```
+
+
+
 ```{r}
 #install_github("unDocUMeantIt/sylly", ref="develop")
 #install_github("unDocUMeantIt/koRpus")

@@ -19,61 +19,64 @@ library(patchwork)
 
 ```
 
-# Data Import and EDA
+# Data Cleaning and EDA
 
-## Data Import and Cleaning
-```{r, include = FALSE}
-motion_data = read_csv("./data/p8105_mtp_data.csv")
-```
-
-The original dataset consists of `r nrow(motion_data)` rows and `r ncol(motion_data)` variables. The 1440 `activity_*` variables denote the measure of activity for 1440 minutes (60 minumtes / hour $\times$ 24 hours) in a day. Therefore, each row contains the activity data for a single day. Such data structure is not tidy, so I use `gather` function to aggregate all the values in the 1440  `activity_*` variables to a single variable, `activity`, and put variable names into a new variable, `minute`. Then I truncate the extra 'activity_' string in the `minute` variable and change it to integer. The next thing is to change the `day` variable to factor and relevel them. 
+The cleaning step is described below in the code chunk:
 
 ```{r}
 # Import and clean the dataset
 motion_data = 
   read_csv("./data/p8105_mtp_data.csv") %>% 
   janitor::clean_names() %>% 
+  # aggregate all the values in the 1440  `activity_*` variables to a single variable 'activity'
+  # put variable names into a new variable, 'minute'
+  # all the original values are preserved.
   gather(key = minute, value = activity, activity_1:activity_1440) %>% 
   mutate(
+    # truncate the extra 'activity_' string in the `minute` variable and change it to integer
     minute = str_replace(minute, "activity_", "") %>% as.integer(),
+    # change the 'day' variable to factor and relevel them
     day = as.factor(day),
     day = forcats::fct_relevel(day, c("Sunday", "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"))
   )
 ```
 
-So far, the dataset has been cleaned and all the original values are preserved. (The original 1440 activity count variables are gathered into one variable.) But for further analysis, it may be helpful to create a `day_num` variable that denotes number of days past the beginning of the study, and a new variable `hour` that denotes the 24 hours in a day. As a final step, the variables and observations are arranged in a reasonable order.
+To facilitate further analysis (grouping), I created two new variables, `day_num` and `hour` (described below). 
 
 ```{r}
 motion_data = 
   motion_data %>% 
   mutate(
+    # `day_num` variable denotes number of days past the beginning of the study
     day_num = ((week - 1) * 7 + as.numeric(day)) %>% as.integer(),
+    # `hour` variable denotes 24 hours in a day
     hour = as.integer(minute / 60) %>% as.factor()
   ) %>% 
+  # The variables and observations are arranged in a reasonable order.
   select(day_num, week, day, minute, hour, activity) %>% 
   arrange(week, day, minute) 
 ```
 
-Now, the final dataset has `r nrow(motion_data)` observations and `r ncol(motion_data)` variables. As described above, the `activity` variable contains all the activity measurement in each minute. The variable `day` denotes the day in a week, and `week` denotes number of weeks. Variable `day` denotes the day in a week, and `minute` variable denotes the 1440 minutes in a day. `day_num` and `hour` are newly created variables that may facilitate grouping in the analysis. A summary of the variables in the cleaned dataset is shown below.
+The final dataset has `r nrow(motion_data)` observations and `r ncol(motion_data)` variables. The `activity` variable contains all the activity counts in each minute. Variables `day`, `minute`, `hour`, `day_num` and `hour` colletively specify the time when each observation was made.
 
 ```{r }
-# Check the final dataset  
+# A summary of the variables in the cleaned dataset 
 str(motion_data)
 ```
 
-## Exploratory Data Analysis
+A visualization of distribution of daily activity was made and shown below. Interestingly, for some given days, activity measurement was close to zero, which incidates no activity recorded for the person in a whole day.
 
-To visualize the distribution of daily activity, I first group the activity by `day_num` and aggregate the counts in the `sum_daily_activity` variable. Then the daily total activity is plotted against day number. As shown in the graph, for some given days, activity measurement was close to zero. Those outliers are interesting, because it means  the person wasn't moving at all in the whole day. It is also possible that the activity data was not recorded for these days, maybe because the person was not wearing the gear or because the gear was broken down these days.
-
-The weekly total activity was plotted in the same way as the daily total activity. As shown in the plot on the right, total activity in some weeks at the beginning are extremely lower than other weeks, and for one week the activity is almost zero.
+The weekly total activity was plotted likewise. As shown below, total activity in some weeks at the beginning are extremely lower than other weeks, and in one week the activity was almost zero.
 
 ```{r}
 # Showing interesting outliers and abnormal values
 # scatter plot for daily activity
 plot_days = 
 motion_data %>% 
+  # group the activity by `day_num` and aggregate the counts in the `sum_daily_activity` variable
   group_by(day_num) %>% 
   summarize(sum_daily_activity = sum(activity)) %>% 
+  # the daily total activity is plotted against day number
   ggplot(aes(x = day_num, y = sum_daily_activity)) +
     geom_point() +
     labs(
@@ -81,6 +84,7 @@ motion_data %>%
       x = "Day #",
       y = "Daily Activity"
     )
+
 # scatter plot for weekly activity
 plot_weeks =
 motion_data %>% 
@@ -104,7 +108,7 @@ plot_days + plot_weeks
 
 ## Daily and Weekly Trend
 
-The `total_activity` tibble contains the sum of activity for each day. To see if this participant became more active over time, plot the daily total activity among days, and also among weeks. The trend lines are plotted using `geom_smooth` with `loess` method. Weekly total activity is plotted with the same workflow. As shown in the first plot, daily total activity increased through the first and last 1/3 parts of the period, and witness a slight decline in the middle. As shown more clearly in the second plot, the weekly aggregate activity also increased over time, and followed the same pattern. 
+As shown in the first plot, daily total activity increased through the first and last 1/3 parts of the period, and witness a slight decline in the middle. The weekly aggregate activity followed a similar pattern. Generally, we can indicate an increased daily activity over time.
 
 ```{r}
 # calculate daily total activity 
@@ -116,8 +120,11 @@ total_activity =
 # plot trend across days
 trend_days = 
   total_activity %>% 
+  # To see if this participant became more active over time, 
+  # plot the daily total activity among days.
   ggplot(aes(x = day_num, y = sum)) +
     geom_point() +
+    # The trend lines are plotted using `geom_smooth` with `loess` method
     geom_smooth(method = 'auto', se = FALSE) +
     labs(
       title = "Trend of Daily Activity",
@@ -136,9 +143,12 @@ sum_of_week =
 # plot trend across weeks
 trend_weeks = 
   sum_of_week %>% 
+  # To see if this participant became more active over time, 
+  # plot the daily total activity among weeks.  
   ggplot(aes(x = week, y = sum)) +
     geom_point() +
     geom_line() +
+    # The trend lines are plotted using `geom_smooth` with `loess` method
     geom_smooth(method = 'auto',se = FALSE) +
     labs(
       title = "Trend of Weekly Activity",
@@ -152,7 +162,7 @@ trend_days + trend_weeks
 
 ## Daily Total Activity by Day of the Week 
 
-The first plot shows the density distribution of daily total activity by day of the week. We can see in this plot that the distribution of activity differs substantially among different days in a week. The majority of daily total activity for all days lies between 250,000 and 500,000, but for Sunday, Saturday and Friday, a larger portion of the area below the density curve shifts to a higher amount (between 500,000 to 750,000). That's to say, the person tend to have more activity on Sunday, Saturday and Friday. Also, the peak for Sunday is lower than other days, which indicates a higher diversity. 
+The distribution of activity differs substantially among different days in a week. For Sunday, Saturday and Friday, a larger portion of the area below the density curve shifts to a higher amount, indicating more activity on those days. Also, the peak for Sunday is lower than other days, which indicates a higher diversity. Therefore, daily activity differ by day in a week.
 
 ```{r fig.width = 11, fig.height = 6}
 # density distribution of daily total activity by day of the week
@@ -180,6 +190,7 @@ trend_days_by_dow =
   summarize(sum = sum(activity)) %>% 
   ggplot(aes(x = week, y = sum, color = day)) +
     geom_point() +
+   # show the trend of daily activity using `geom_smooth` with the `lm` method
     geom_smooth(method = 'lm', se = FALSE) +
     labs(
       title = "Trend of Activity by Day of Week",
@@ -195,50 +206,50 @@ trend_days_by_dow =
 total_activity_dow + trend_days_by_dow
 ```
 
-The second plot above shows the scatterplot of the distribution of daily total activity across weeks. More importantly, it shows the trend of daily activity using `geom_smooth` with the `lm` method. The second plot suggests that the trends of activity by different days of week are different. Interestingly, the daily activity increased for all days in the week over time, but the slope differs. For example, the daily activity increased the most in Sundays and the least in Mondays.
-
+The second plot shows the trend of activity grouped by day of the week. The daily activity increased for all days over time, but their slopes differ. Activity increased most on Sundays.
 
 # Activity over the course of a day
 ## 24-hour activity profiles
-Also visualize effects of `time` and `day of the week` on 24-hour activity profiles; incorporating smooth estimates of mean activity profiles may clarify these effects.
 
-Comment on relationships you think are interesting. (No formal statistical analyses are needed.)))
-
-
-In this section, we start to investigate how activity counts vary in 24 hours each day. In the data cleaning step, a new variable `hour` has been created to denote 24 hours in a day. So we can group the dataset by `hour` and `day` and draw a ridgeline plot to see the distribution of hourly activity in different days. Since there are some outliers in the `hour_activity` variable that overly extend the X scale and therefore affect readability,  values > 40000 in `hour_activity` was filtered out.  
+In this section, we start to investigate how activity counts vary in 24 hours each day.    
 
 ```{r}
-# create a density ridges plot to see the distribution of hourly activity
+  # create a density ridges plot to see the distribution of hourly activity
   motion_data %>% 
+  # group the dataset by `hour` and `day_num`
   group_by(day_num, hour) %>% 
   summarize(hour_activity = sum(activity)) %>% 
+  # values > 40000 in `hour_activity` was filtered out,
+  # because some outliers in the `hour_activity` variable overly extend the X scale and therefore affect readability
   filter(hour_activity <= 40000) %>% 
   ggplot(aes(y = hour, x = hour_activity)) +
+    # draw distribution of hourly activity in different days
     geom_density_ridges() +
     labs(
       x = "Hour Total Activity",
       y = "Hour",
-      title = "Density Distribution of hourly activity"
+      title = "Density Distribution of 24-hour activity"
     )
 
 ```
 
-We can see from this plot what time everyday this person tended to be more active (or maybe awake). We can also indicate the person's daily routine. For example, from 10 pm to 7 am, the person tended to be inactive (or maybe sleeping). We cannot see a significant defference in distribution of activity among hours when the person is awake. The pattern looks similar from 9 am to 9 pm.
+We can see from this plot what time everyday this person tended to be more active and even indicate the person's daily routine. For example, from 10 pm to 7 am, the person tended to be inactive.
 
 ## Effects of time and day of the week on 24-hour activity profiles
 
-Group the dataset by day of the week and hour, so that we can see how the _average hourly activity_ change in 24 hours. I calculate the _average hourly activity_ by summing up the activity counts in each group and divide it by the total number of weeks, 47. The 24-hour trend line for activity was plotted using the default "loess" method. 
-
-As shown in the first plot, the person tends to be the most active around 12 pm on Sundays, and is also very active around 6 pm on Fridays and around 12 pm on Saturdays. Maybe the person was more willing to do exercise during weekends. We can also see that on Thurdays, Mondays and Fridays, the peak of activity is round 6 pm, which is different from other days, and maybe this is related to his work shift.
+As shown in the first plot, the person tends to be most active around 12 pm on Sundays, and is also very active around 6 pm on Fridays and around 12 pm on Saturdays. Additionally, on Thurdays, Mondays and Fridays, the peak of activity is round 6 pm, which is different from other days.
 
 ```{r fig.width = 11, fig.height = 6}
 # visualize effects of time and day of the week on 24-hour activity profiles
 # effect of day in the week on 24-hour activity profiles
 activity_profile_dow = 
   motion_data %>% 
+  # group the dataset by day of the week and hour
   group_by(day, hour) %>%
+  # calculate the _average hourly activity_ by summing up the activity counts in each group and divide it by the total number of weeks
   summarize(avg_activity = sum(activity) / 47) %>% 
   ggplot(aes(x = hour, y = avg_activity, group = day, color = day)) +
+    # The 24-hour trend line for activity was plotted using the default "loess" method. 
     geom_smooth(se = FALSE) +
     labs(
       x = "Hour",
@@ -272,7 +283,7 @@ activity_profile_week =
 activity_profile_dow + activity_profile_week
 ```
 
-To examine the effect of time on 24-hour activity profiles, I choose to use average activity data across weeks. That is to say, the trend lines are grouped by weeks, so there are 47 trend lines, each showing the average 24-hour profile in a single week. 
+To examine the effect of time on 24-hour activity profiles, I used average activity data across weeks. The trend lines are grouped by weeks, each showing the average 24-hour profile in a single week. 
 
 We can see that with the progress of time, activity tends to have a higher peak, indicating more activity.
 

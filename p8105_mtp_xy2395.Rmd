@@ -50,7 +50,7 @@ motion_data =
     # `day_num` variable denotes number of days past the beginning of the study
     day_num = ((week - 1) * 7 + as.numeric(day)) %>% as.integer(),
     # `hour` variable denotes 24 hours in a day
-    hour = as.integer(minute / 60) %>% as.factor()
+    hour = as.integer((minute - 1) / 60) %>% as.factor()
   ) %>% 
   # The variables and observations are arranged in a reasonable order.
   select(day_num, week, day, minute, hour, activity) %>% 

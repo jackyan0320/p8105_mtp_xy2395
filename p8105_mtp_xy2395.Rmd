@@ -125,7 +125,7 @@ trend_days_by_dow =
   group_by(week, day, day_num) %>%
   summarize(sum = sum(activity)) %>% 
   ggplot(aes(x = week, y = sum, color = day)) +
-    geom_point() +
+    geom_point(alpha = 0.4) +
    # show the trend of daily activity using `geom_smooth` with the `lm` method
     geom_smooth(method = 'lm', se = FALSE) +
     labs(
